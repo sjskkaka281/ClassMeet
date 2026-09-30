@@ -403,6 +403,16 @@ input{
   font-size:15px;
 }
 
+.screen-note{
+  flex-shrink:0;
+  font-size:12px;
+  line-height:1.4;
+  color:#ffcf7a;
+  background:rgba(255,180,60,.08);
+  border-top:1px solid rgba(255,180,60,.25);
+  padding:8px 16px;
+  text-align:center;
+}
 .control-bar{
   min-height:78px;
   flex-shrink:0;
@@ -433,6 +443,7 @@ input{
 .ctrl.active{background:var(--danger); border-color:var(--danger); color:#fff;}
 .ctrl.primary{background:var(--accent); border-color:var(--accent); color:#fff;}
 .ctrl.primary.active{background:var(--green); border-color:var(--green);}
+.ctrl.disabled{opacity:.4; cursor:not-allowed; pointer-events:none;}
 .hq-toggle{
   font-size:12px;
   color:var(--text-dim);
@@ -547,12 +558,15 @@ input{
     </div>
   </aside>
 
+  <div id="screenShareNote" class="screen-note" hidden>
+    📵 Screen sharing isn't supported by mobile browsers (this is an OS/browser
+    limitation — Google Meet, Zoom etc. have the same restriction on mobile web).
+    You can still watch others' shared screens and use your mic here. To present,
+    open this same link on a desktop/laptop in Chrome or Edge.
+  </div>
   <footer class="control-bar">
     <button id="micBtn" class="ctrl" title="Toggle microphone">
       <span class="ic">🎤</span><span class="lbl">Mic</span>
-    </button>
-    <button id="camBtn" class="ctrl" title="Toggle camera">
-      <span class="ic">📷</span><span class="lbl">Camera</span>
     </button>
     <button id="screenBtn" class="ctrl primary" title="Share your screen / tab with audio">
       <span class="ic">🖥️</span><span class="lbl">Share screen</span>
@@ -621,7 +635,7 @@ input{
     OPUS_BITRATE: 510000,       // max practical opus bitrate (bps)
     OPUS_BITRATE_MIC: 256000,   // mic voice, still very high quality
     VIDEO_BITRATE_SCREEN: 8_000_000, // bps, good for 1080p30 screen/video content
-    VIDEO_BITRATE_CAM: 1_500_000,
+
 
     HOST_PREFIX: 'cml-host-',
     HOST_FALLBACK_BASE_DELAY: 2500, // ms
@@ -667,7 +681,6 @@ input{
   const chatForm = $('chatForm');
   const chatInput = $('chatInput');
   const micBtn = $('micBtn');
-  const camBtn = $('camBtn');
   const screenBtn = $('screenBtn');
   const hqMicToggle = $('hqMicToggle');
   const leaveBtn = $('leaveBtn');
@@ -698,7 +711,6 @@ input{
     localScreenStream: null,
 
     micEnabled: false,
-    camEnabled: false,
     screenEnabled: false,
     hqMic: false,
 
@@ -879,6 +891,7 @@ input{
   function afterConnected() {
     document.title = 'ClassMeet Live — ' + state.roomCode;
     renderPeopleList();
+    renderLocalTile();
     updateCounts();
     addSystemChat('You joined room "' + state.roomCode + '" as ' + state.myName);
   }
@@ -1067,11 +1080,12 @@ input{
     if (!entry) return;
     const { pc, senders } = entry;
 
+    // Only mic audio travels in the "personal" stream now (camera removed).
     state.localPersonalStream.getTracks().forEach((track) => {
-      const key = track.kind === 'audio' ? 'mic' : 'cam';
+      const key = 'mic';
       if (!senders[key]) {
         senders[key] = pc.addTrack(track, state.localPersonalStream);
-        applyBitrate(senders[key], track.kind === 'audio' ? CONFIG.OPUS_BITRATE_MIC : CONFIG.VIDEO_BITRATE_CAM);
+        applyBitrate(senders[key], CONFIG.OPUS_BITRATE_MIC);
       }
     });
 
@@ -1297,37 +1311,24 @@ input{
     updateLocalTileAvatar();
   }
 
-  async function toggleCam() {
-    if (!state.camEnabled) {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } } });
-        stream.getVideoTracks().forEach((t) => state.localPersonalStream.addTrack(t));
-        state.camEnabled = true;
-        pushLocalTrackToAllPeers('cam');
-        renderLocalTile();
-      } catch (e) {
-        alert('Could not access camera: ' + e.message);
-        return;
-      }
-    } else {
-      state.localPersonalStream.getVideoTracks().forEach((t) => {
-        t.stop();
-        state.localPersonalStream.removeTrack(t);
-      });
-      state.pcs.forEach((entry) => {
-        if (entry.senders.cam) { try { entry.pc.removeTrack(entry.senders.cam); } catch (_) {} entry.senders.cam = null; }
-      });
-      state.camEnabled = false;
-      renderLocalTile();
-    }
-    camBtn.classList.toggle('active', state.camEnabled);
-  }
-
   function pushLocalTrackToAllPeers(kind) {
     state.pcs.forEach((entry, remoteId) => addAllLocalTracksTo(remoteId));
   }
 
+  const SCREEN_SHARE_SUPPORTED = !!(navigator.mediaDevices && typeof navigator.mediaDevices.getDisplayMedia === 'function');
+
   async function toggleScreenShare() {
+    if (!SCREEN_SHARE_SUPPORTED) {
+      $('screenShareNote').hidden = false;
+      alert(
+        '📵 Screen sharing isn\'t supported on this browser/device.\n\n' +
+        'Mobile browsers (Android/iOS) don\'t provide a screen-capture API to websites ' +
+        '— this is the same restriction Google Meet and Zoom have on mobile web.\n\n' +
+        'You can still watch other people\'s shared screens and use your mic here.\n' +
+        'To present your screen, open this same link on a desktop/laptop in Chrome or Edge.'
+      );
+      return;
+    }
     if (!state.screenEnabled) {
       try {
         const stream = await navigator.mediaDevices.getDisplayMedia({
@@ -1387,8 +1388,15 @@ input{
   });
 
   micBtn.addEventListener('click', toggleMic);
-  camBtn.addEventListener('click', toggleCam);
   screenBtn.addEventListener('click', toggleScreenShare);
+
+  // Grey out the Share screen button up-front on browsers that can't do it
+  // (mobile), and show the explanatory note, instead of waiting for a click.
+  if (!SCREEN_SHARE_SUPPORTED) {
+    screenBtn.classList.add('disabled');
+    screenBtn.title = 'Screen sharing needs a desktop browser (Chrome/Edge)';
+    $('screenShareNote').hidden = false;
+  }
 
   // ------------------------------------------------------------------
   // UI RENDERING
@@ -1397,25 +1405,14 @@ input{
     let tile = document.getElementById('tile-local');
     if (!tile) {
       tile = document.createElement('div');
-      tile.className = 'cam-tile mirror';
+      tile.className = 'cam-tile';
       tile.id = 'tile-local';
       tile.innerHTML = `
-        <video autoplay playsinline muted></video>
-        <div class="avatar" style="display:none"></div>
-        <div class="name-tag"><span class="mic-ic">🎤</span><span>You</span></div>`;
+        <div class="avatar"></div>
+        <div class="name-tag"><span class="mic-ic">🔇</span><span>You</span></div>`;
       tilesRow.prepend(tile);
     }
-    const video = tile.querySelector('video');
-    const avatar = tile.querySelector('.avatar');
-    if (state.camEnabled) {
-      video.srcObject = state.localPersonalStream;
-      video.style.display = '';
-      avatar.style.display = 'none';
-    } else {
-      video.style.display = 'none';
-      avatar.style.display = 'flex';
-      avatar.textContent = shortName(state.myName);
-    }
+    tile.querySelector('.avatar').textContent = shortName(state.myName);
   }
   function updateLocalTileAvatar() {
     const tile = document.getElementById('tile-local');
@@ -1432,7 +1429,7 @@ input{
       tile.id = 'tile-' + remoteId;
       const name = (state.members.get(remoteId) || {}).name || 'Guest';
       tile.innerHTML = `
-        <video autoplay playsinline></video>
+        <audio autoplay playsinline></audio>
         <div class="avatar">${escapeHtml(shortName(name))}</div>
         <div class="name-tag"><span class="mic-ic">🎤</span><span class="nm">${escapeHtml(name)}</span></div>`;
       tilesRow.appendChild(tile);
@@ -1440,14 +1437,12 @@ input{
     return tile;
   }
 
+  // Plays a remote participant's mic audio (no camera in this app — the
+  // avatar with their initial is always shown; this just wires up sound).
   function renderPersonalTile(remoteId, stream) {
     const tile = getOrCreateCamTile(remoteId);
-    const video = tile.querySelector('video');
-    const avatar = tile.querySelector('.avatar');
-    video.srcObject = stream;
-    const hasVideo = stream.getVideoTracks().length > 0;
-    video.style.display = hasVideo ? '' : 'none';
-    avatar.style.display = hasVideo ? 'none' : 'flex';
+    const audioEl = tile.querySelector('audio');
+    if (audioEl.srcObject !== stream) audioEl.srcObject = stream;
   }
 
   function removeCamTile(remoteId) {
@@ -1593,5 +1588,5 @@ input{
 })();
 
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4339cc5787c867b',t:'MTc5MDc3NTM0Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>
