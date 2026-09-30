@@ -1,0 +1,1542 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>ClassMeet Live — HD Screen Share Classroom</title>
+<meta name="description" content="Free, serverless HD screen-share classroom. Runs 100% in the browser via GitHub Pages.">
+<style>
+:root{
+  --bg:#0e1116;
+  --bg-elev:#161b22;
+  --bg-elev2:#1c222b;
+  --border:#2a313c;
+  --text:#e6edf3;
+  --text-dim:#9aa7b5;
+  --accent:#4f8cff;
+  --accent-hover:#6ea0ff;
+  --danger:#ef4444;
+  --danger-hover:#f87171;
+  --green:#3ecf6e;
+  --radius:14px;
+  font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box;}
+[hidden]{display:none !important;}
+html,body{
+  height:100%;
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:inherit;
+  overflow:hidden;
+}
+button{
+  font-family:inherit;
+  cursor:pointer;
+}
+input{
+  font-family:inherit;
+}
+
+.screen{
+  width:100vw;
+  height:100vh;
+}
+
+/* ---------------- LOGIN ---------------- */
+#loginScreen{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:radial-gradient(circle at 30% 20%, #1b2333 0%, #0e1116 60%);
+  padding:16px;
+  overflow:auto;
+}
+.login-card{
+  width:100%;
+  max-width:420px;
+  background:var(--bg-elev);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:32px 28px;
+  box-shadow:0 20px 60px rgba(0,0,0,.45);
+}
+.brand{
+  text-align:center;
+  margin-bottom:22px;
+}
+.brand-logo{
+  width:56px;
+  height:56px;
+  margin:0 auto 10px;
+  border-radius:16px;
+  background:linear-gradient(135deg,var(--accent),#7b5cff);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:700;
+  font-size:20px;
+  color:#fff;
+}
+.brand h1{
+  margin:0 0 6px;
+  font-size:22px;
+}
+.tagline{
+  margin:0;
+  color:var(--text-dim);
+  font-size:13px;
+  line-height:1.4;
+}
+#loginForm label{
+  display:block;
+  font-size:12.5px;
+  color:var(--text-dim);
+  margin-top:14px;
+  margin-bottom:5px;
+}
+#loginForm input{
+  width:100%;
+  padding:11px 12px;
+  border-radius:10px;
+  border:1px solid var(--border);
+  background:var(--bg-elev2);
+  color:var(--text);
+  font-size:14px;
+  outline:none;
+}
+#loginForm input:focus{
+  border-color:var(--accent);
+}
+#loginForm hr{
+  border:none;
+  border-top:1px solid var(--border);
+  margin:18px 0 0;
+}
+#loginBtn{
+  width:100%;
+  margin-top:20px;
+  padding:12px;
+  border:none;
+  border-radius:10px;
+  background:var(--accent);
+  color:#fff;
+  font-weight:600;
+  font-size:15px;
+  transition:background .15s;
+}
+#loginBtn:hover{background:var(--accent-hover);}
+.error{
+  color:var(--danger);
+  font-size:13px;
+  min-height:16px;
+  margin:10px 0 0;
+  text-align:center;
+}
+.hint{
+  font-size:11.5px;
+  color:var(--text-dim);
+  text-align:center;
+  margin:14px 0 0;
+  line-height:1.5;
+}
+
+/* ---------------- MEETING ---------------- */
+#meetingScreen{
+  display:flex;
+  flex-direction:column;
+  background:var(--bg);
+}
+.topbar{
+  height:54px;
+  min-height:54px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 16px;
+  background:var(--bg-elev);
+  border-bottom:1px solid var(--border);
+}
+.room-info{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  font-size:13.5px;
+  color:var(--text-dim);
+}
+.dot{
+  width:9px;height:9px;border-radius:50%;
+  background:var(--danger);
+}
+.dot.live{background:var(--green); box-shadow:0 0 0 3px rgba(62,207,110,.18);}
+#copyLinkBtn, #participantsBtn, #chatToggleBtn{
+  background:var(--bg-elev2);
+  border:1px solid var(--border);
+  color:var(--text);
+  padding:6px 12px;
+  border-radius:8px;
+  font-size:13px;
+}
+#copyLinkBtn:hover, #participantsBtn:hover, #chatToggleBtn:hover{border-color:var(--accent);}
+.status{font-size:12.5px; color:var(--text-dim);}
+.topbar-actions{display:flex; align-items:center; gap:8px;}
+.danger{background:var(--danger) !important; color:#fff !important; border:none !important;}
+.danger:hover{background:var(--danger-hover) !important;}
+
+.stage-area{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+  padding:14px 14px 0;
+  gap:10px;
+}
+.stage-grid{
+  flex:1;
+  min-height:0;
+  display:grid;
+  gap:8px;
+  grid-auto-flow:column;
+  grid-auto-columns:1fr;
+  position:relative;
+}
+.stage-grid:empty::before{content:"";}
+.placeholder{
+  position:absolute;
+  inset:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  color:var(--text-dim);
+  background:var(--bg-elev);
+  border:1px dashed var(--border);
+  border-radius:var(--radius);
+  text-align:center;
+  padding:20px;
+  gap:6px;
+}
+.ph-icon{font-size:40px; margin-bottom:6px;}
+.ph-sub{font-size:12px; max-width:360px; color:#6b7684;}
+
+.screen-tile{
+  position:relative;
+  background:#000;
+  border-radius:var(--radius);
+  overflow:hidden;
+  border:1px solid var(--border);
+  min-width:0;
+  min-height:0;
+}
+.screen-tile video{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  background:#000;
+}
+.tile-tag{
+  position:absolute;
+  left:10px; bottom:10px;
+  background:rgba(0,0,0,.55);
+  padding:4px 10px;
+  border-radius:20px;
+  font-size:12px;
+  backdrop-filter:blur(4px);
+}
+
+.tiles-row{
+  display:flex;
+  gap:10px;
+  overflow-x:auto;
+  padding-bottom:14px;
+  min-height:120px;
+}
+.cam-tile{
+  position:relative;
+  flex:0 0 180px;
+  width:180px;
+  height:110px;
+  background:var(--bg-elev2);
+  border:1px solid var(--border);
+  border-radius:12px;
+  overflow:hidden;
+}
+.cam-tile video{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  transform:scaleX(1);
+}
+.cam-tile.mirror video{transform:scaleX(-1);}
+.cam-tile .avatar{
+  position:absolute; inset:0;
+  display:flex; align-items:center; justify-content:center;
+  font-size:28px; font-weight:700;
+  background:linear-gradient(135deg,#2a3546,#1c222b);
+  color:#cfd8e3;
+}
+.cam-tile .name-tag{
+  position:absolute;
+  left:6px; bottom:6px;
+  font-size:11.5px;
+  background:rgba(0,0,0,.55);
+  padding:2px 8px;
+  border-radius:12px;
+  display:flex;
+  align-items:center;
+  gap:4px;
+}
+.cam-tile .mic-ic{font-size:11px;}
+.cam-tile.sharing{outline:2px solid var(--accent);}
+
+.side-panel{
+  position:fixed;
+  right:0; top:54px; bottom:78px;
+  width:300px;
+  background:var(--bg-elev);
+  border-left:1px solid var(--border);
+  display:flex;
+  flex-direction:column;
+  z-index:20;
+}
+.side-tabs{
+  display:flex;
+  border-bottom:1px solid var(--border);
+}
+.side-tab{
+  flex:1;
+  background:transparent;
+  border:none;
+  color:var(--text-dim);
+  padding:12px;
+  font-size:13px;
+  border-bottom:2px solid transparent;
+}
+.side-tab.active{
+  color:var(--text);
+  border-bottom-color:var(--accent);
+}
+.side-body{
+  flex:1;
+  min-height:0;
+  display:flex;
+  flex-direction:column;
+}
+.people-list{
+  list-style:none;
+  margin:0; padding:8px;
+  overflow-y:auto;
+  flex:1;
+}
+.people-list li{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:9px 10px;
+  border-radius:8px;
+  font-size:13.5px;
+}
+.people-list li:hover{background:var(--bg-elev2);}
+.people-list .tag{
+  font-size:10.5px;
+  color:var(--text-dim);
+  background:var(--bg-elev2);
+  padding:1px 6px;
+  border-radius:6px;
+}
+.chat-body{
+  flex:1;
+  min-height:0;
+  display:flex;
+  flex-direction:column;
+}
+.chat-messages{
+  flex:1;
+  overflow-y:auto;
+  padding:10px;
+  font-size:13px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.chat-messages .msg b{color:var(--accent);}
+.chat-messages .msg .txt{color:var(--text);}
+.chat-messages .msg .sys{color:var(--text-dim); font-style:italic;}
+#chatForm{
+  display:flex;
+  gap:6px;
+  padding:10px;
+  border-top:1px solid var(--border);
+}
+#chatForm input{
+  flex:1;
+  padding:9px 10px;
+  border-radius:8px;
+  border:1px solid var(--border);
+  background:var(--bg-elev2);
+  color:var(--text);
+}
+#chatForm button{
+  background:var(--accent);
+  border:none;
+  color:#fff;
+  border-radius:8px;
+  padding:0 14px;
+  font-size:15px;
+}
+
+.control-bar{
+  height:78px;
+  min-height:78px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:14px;
+  background:var(--bg-elev);
+  border-top:1px solid var(--border);
+  padding:0 16px;
+}
+.ctrl{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:2px;
+  background:var(--bg-elev2);
+  border:1px solid var(--border);
+  color:var(--text);
+  padding:9px 16px;
+  border-radius:12px;
+  font-size:11px;
+  min-width:72px;
+}
+.ctrl .ic{font-size:19px;}
+.ctrl:hover{border-color:var(--accent);}
+.ctrl.active{background:var(--danger); border-color:var(--danger); color:#fff;}
+.ctrl.primary{background:var(--accent); border-color:var(--accent); color:#fff;}
+.ctrl.primary.active{background:var(--green); border-color:var(--green);}
+.hq-toggle{
+  font-size:12px;
+  color:var(--text-dim);
+  display:flex;
+  align-items:center;
+  gap:6px;
+  user-select:none;
+}
+.net-badge{
+  font-size:11.5px;
+  color:var(--text-dim);
+  border:1px solid var(--border);
+  padding:5px 10px;
+  border-radius:20px;
+}
+
+@media (max-width:860px){
+  .side-panel{width:82vw;}
+  .ctrl{min-width:58px; padding:8px 10px; font-size:10px;}
+  .hq-toggle{display:none;}
+  .cam-tile{flex-basis:130px; width:130px; height:82px;}
+}
+
+</style>
+</head>
+<body>
+
+<!-- ======================= LOGIN SCREEN ======================= -->
+<section id="loginScreen" class="screen">
+  <div class="login-card">
+    <div class="brand">
+      <div class="brand-logo">CM</div>
+      <h1>ClassMeet Live</h1>
+      <p class="tagline">HD screen share &amp; crystal-clear audio classroom — 100% in your browser</p>
+    </div>
+    <form id="loginForm" autocomplete="off">
+      <label>Username
+        <input type="text" id="username" placeholder="admin" required autocomplete="username">
+      </label>
+      <label>Password
+        <input type="password" id="password" placeholder="admin" required autocomplete="current-password">
+      </label>
+      <hr>
+      <label>Your Display Name
+        <input type="text" id="displayName" placeholder="e.g. Rahul" required maxlength="30">
+      </label>
+      <label>Class / Room Code
+        <input type="text" id="roomCode" placeholder="e.g. physics101" required maxlength="40">
+      </label>
+      <button type="submit" id="loginBtn">Join Class</button>
+      <p class="error" id="loginError"></p>
+      <p class="hint">Default login: <b>admin</b> / <b>admin</b> — everyone who enters the same Room Code joins the same class.</p>
+    </form>
+  </div>
+</section>
+
+<!-- ======================= MEETING SCREEN ======================= -->
+<section id="meetingScreen" class="screen" hidden>
+  <header class="topbar">
+    <div class="room-info">
+      <span class="dot live" id="liveDot"></span>
+      <span id="roomLabel">Room: —</span>
+      <button id="copyLinkBtn" title="Copy invite link">🔗 Copy invite</button>
+    </div>
+    <div class="status" id="connStatus">Connecting…</div>
+    <div class="topbar-actions">
+      <button id="participantsBtn">👥 <span id="peopleCount">1</span></button>
+      <button id="chatToggleBtn">💬 Chat</button>
+      <button id="leaveBtn" class="danger">Leave</button>
+    </div>
+  </header>
+
+  <main class="stage-area">
+    <div id="stageGrid" class="stage-grid">
+      <div class="placeholder" id="stagePlaceholder">
+        <div class="ph-icon">🖥️</div>
+        <div>Waiting for someone to share their screen…</div>
+        <div class="ph-sub">Click <b>Share screen</b> below to present a YouTube video or any tab/app with full audio.</div>
+      </div>
+    </div>
+    <div id="tilesRow" class="tiles-row"></div>
+  </main>
+
+  <aside id="sidePanel" class="side-panel" hidden>
+    <div class="side-tabs">
+      <button class="side-tab active" data-tab="people">People</button>
+      <button class="side-tab" data-tab="chat">Chat</button>
+    </div>
+    <div class="side-body">
+      <ul id="peopleList" class="people-list"></ul>
+      <div id="chatBody" class="chat-body" hidden>
+        <div id="chatMessages" class="chat-messages"></div>
+        <form id="chatForm">
+          <input type="text" id="chatInput" placeholder="Message to everyone…" autocomplete="off" maxlength="500">
+          <button type="submit">➤</button>
+        </form>
+      </div>
+    </div>
+  </aside>
+
+  <footer class="control-bar">
+    <button id="micBtn" class="ctrl" title="Toggle microphone">
+      <span class="ic">🎤</span><span class="lbl">Mic</span>
+    </button>
+    <button id="camBtn" class="ctrl" title="Toggle camera">
+      <span class="ic">📷</span><span class="lbl">Camera</span>
+    </button>
+    <button id="screenBtn" class="ctrl primary" title="Share your screen / tab with audio">
+      <span class="ic">🖥️</span><span class="lbl">Share screen</span>
+    </button>
+    <label class="hq-toggle" title="Disables mic echo-cancellation / noise-suppression for raw, unprocessed mic audio">
+      <input type="checkbox" id="hqMicToggle"> Raw Mic (HD)
+    </label>
+    <span class="net-badge" id="netBadge">Peers: 0</span>
+  </footer>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>
+/* =====================================================================
+   ClassMeet Live
+   A serverless, GitHub-Pages-hostable classroom app: full-mesh WebRTC
+   video/audio + screen-share, signaled over PeerJS's free public cloud
+   broker (so there is no custom backend to run/maintain — it works as
+   long as GitHub Pages + the public PeerJS broker are up, which is the
+   closest thing to "24/7" achievable with 100% static hosting).
+
+   AUDIO QUALITY NOTES (read me):
+   - Real-time browser audio always uses the Opus codec (WebRTC mandates
+     it) — true "zero compression" is not something any browser-based
+     video/meeting tool (Meet, Webex, Zoom, Teams, etc.) can do either.
+   - What we CAN do, and do here, is push Opus to its highest quality
+     mode: 48kHz stereo, ~510 kbps (its practical ceiling), FEC on,
+     DTX/AGC/NS/echo-cancellation OFF for shared tab/screen audio, and
+     a "music" content hint — this is effectively transparent/lossless
+     to the human ear for movies, YouTube, music, etc.
+   ===================================================================== */
+
+(() => {
+  'use strict';
+
+  // ------------------------------------------------------------------
+  // CONFIG
+  // ------------------------------------------------------------------
+  const CONFIG = {
+    // Leave peerHost/peerPort/peerPath as null to use PeerJS's free
+    // public cloud broker (0.peerjs.com). For heavier/more reliable
+    // 24/7 use, self-host a free PeerServer (e.g. on Render.com) and
+    // fill these in — see README.md.
+    peerHost: null,
+    peerPort: null,
+    peerPath: null,
+
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:stun.relay.metered.ca:80' },
+      // Free public TURN (openrelay project) — best effort, may be
+      // rate limited. Replace with your own TURN for production use.
+      { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+      { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+      { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+    ],
+
+    AUTH_USER: 'admin',
+    AUTH_PASS: 'admin',
+
+    OPUS_BITRATE: 510000,       // max practical opus bitrate (bps)
+    OPUS_BITRATE_MIC: 256000,   // mic voice, still very high quality
+    VIDEO_BITRATE_SCREEN: 8_000_000, // bps, good for 1080p30 screen/video content
+    VIDEO_BITRATE_CAM: 1_500_000,
+
+    HOST_PREFIX: 'cml-host-',
+    HOST_FALLBACK_BASE_DELAY: 2500, // ms
+  };
+
+  // ------------------------------------------------------------------
+  // DOM
+  // ------------------------------------------------------------------
+  const $ = (id) => document.getElementById(id);
+  const loginScreen = $('loginScreen');
+  const meetingScreen = $('meetingScreen');
+  const loginForm = $('loginForm');
+  const loginError = $('loginError');
+  const roomLabel = $('roomLabel');
+  const connStatus = $('connStatus');
+  const peopleCount = $('peopleCount');
+  const netBadge = $('netBadge');
+  const stageGrid = $('stageGrid');
+  const stagePlaceholder = $('stagePlaceholder');
+  const tilesRow = $('tilesRow');
+  const sidePanel = $('sidePanel');
+  const peopleList = $('peopleList');
+  const chatBody = $('chatBody');
+  const chatMessages = $('chatMessages');
+  const chatForm = $('chatForm');
+  const chatInput = $('chatInput');
+  const micBtn = $('micBtn');
+  const camBtn = $('camBtn');
+  const screenBtn = $('screenBtn');
+  const hqMicToggle = $('hqMicToggle');
+  const leaveBtn = $('leaveBtn');
+  const copyLinkBtn = $('copyLinkBtn');
+  const participantsBtn = $('participantsBtn');
+  const chatToggleBtn = $('chatToggleBtn');
+
+  // ------------------------------------------------------------------
+  // STATE
+  // ------------------------------------------------------------------
+  const state = {
+    myId: null,
+    myName: '',
+    roomCode: '',
+    hostId: null,
+    isHost: false,
+    peer: null,
+
+    dataConns: new Map(),   // peerId -> PeerJS DataConnection
+    pcs: new Map(),         // peerId -> { pc, polite, makingOffer, ignoreOffer, iceQueue:[], senders:{} }
+    members: new Map(),     // peerId -> { name }
+    remoteScreenStreamId: new Map(), // peerId -> streamId currently marked as screen-share
+    remoteTiles: new Map(), // peerId -> { camEl, wrapEl, nameTag, micIc }
+    screenTiles: new Map(), // peerId -> element in stage
+    remoteMicState: new Map(), // peerId -> bool
+
+    localPersonalStream: new MediaStream(), // holds mic + cam tracks we send
+    localScreenStream: null,
+
+    micEnabled: false,
+    camEnabled: false,
+    screenEnabled: false,
+    hqMic: false,
+
+    activeScreenSharers: new Set(), // peerIds currently sharing (incl. possibly self)
+  };
+
+  // ------------------------------------------------------------------
+  // UTIL
+  // ------------------------------------------------------------------
+  function randomId(prefix) {
+    return (prefix || 'u-') + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+  }
+  function sanitizeRoom(code) {
+    return code.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '') || 'default';
+  }
+  function computeHostId(roomCode) {
+    return CONFIG.HOST_PREFIX + sanitizeRoom(roomCode);
+  }
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+  function shortName(name) {
+    return (name || '?').trim().slice(0, 1).toUpperCase() || '?';
+  }
+  function setStatus(text) { connStatus.textContent = text; }
+  function log(...args) { console.log('[ClassMeet]', ...args); }
+
+  function peerOptions() {
+    const opts = {
+      debug: 1,
+      config: { iceServers: CONFIG.iceServers },
+    };
+    if (CONFIG.peerHost) opts.host = CONFIG.peerHost;
+    if (CONFIG.peerPort) opts.port = CONFIG.peerPort;
+    if (CONFIG.peerPath) opts.path = CONFIG.peerPath;
+    return opts;
+  }
+
+  // ------------------------------------------------------------------
+  // LOGIN
+  // ------------------------------------------------------------------
+  const params = new URLSearchParams(location.search);
+  if (params.get('room')) $('roomCode').value = params.get('room');
+
+  loginForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const u = $('username').value.trim();
+    const p = $('password').value;
+    const name = $('displayName').value.trim();
+    const room = $('roomCode').value.trim();
+
+    if (u !== CONFIG.AUTH_USER || p !== CONFIG.AUTH_PASS) {
+      loginError.textContent = 'Invalid username or password. Default is admin / admin.';
+      return;
+    }
+    if (!name || !room) {
+      loginError.textContent = 'Please enter your name and a room code.';
+      return;
+    }
+    loginError.textContent = '';
+    sessionStorage.setItem('cml_authed', '1');
+    startApp(name, sanitizeRoom(room));
+  });
+
+  // ------------------------------------------------------------------
+  // APP BOOT / ROOM JOIN (host election with automatic fallback)
+  // ------------------------------------------------------------------
+  function startApp(name, roomCode) {
+    state.myName = name;
+    state.roomCode = roomCode;
+    loginScreen.hidden = true;
+    meetingScreen.hidden = false;
+    roomLabel.textContent = 'Room: ' + roomCode;
+    setStatus('Connecting to signaling network…');
+    tryBecomeHost();
+  }
+
+  function tryBecomeHost() {
+    const hostId = computeHostId(state.roomCode);
+    state.hostId = hostId;
+    const p = new Peer(hostId, peerOptions());
+    let settled = false;
+
+    p.on('open', (id) => {
+      settled = true;
+      state.peer = p;
+      state.myId = id;
+      state.isHost = true;
+      state.members.set(id, { name: state.myName });
+      setupPeerEvents(p);
+      setStatus('Connected (you are the room host)');
+      renderPeopleList();
+      afterConnected();
+    });
+
+    p.on('error', (err) => {
+      if (settled) return;
+      if (err && (err.type === 'unavailable-id')) {
+        try { p.destroy(); } catch (_) {}
+        joinAsParticipant(hostId);
+      } else {
+        log('host peer error', err);
+        setStatus('Signaling error: ' + (err && err.type ? err.type : err) + ' — retrying…');
+        setTimeout(() => joinAsParticipant(hostId), 1500);
+      }
+    });
+  }
+
+  function joinAsParticipant(hostId, attempt) {
+    attempt = attempt || 1;
+    const p = new Peer(randomId('u-'), peerOptions());
+
+    p.on('open', (id) => {
+      state.peer = p;
+      state.myId = id;
+      state.isHost = false;
+      setupPeerEvents(p);
+      setStatus('Connecting to class host…');
+
+      let joined = false;
+      const conn = p.connect(hostId, { reliable: true, metadata: { name: state.myName } });
+
+      const failTimer = setTimeout(() => {
+        if (joined) return;
+        log('host unreachable, attempting host takeover / retry');
+        try { conn.close(); } catch (_) {}
+        try { p.destroy(); } catch (_) {}
+        // Room host may have gone offline. Try claiming the host slot
+        // ourselves (first to grab it wins); if it's actually still
+        // occupied this will simply fail over to joining again.
+        if (attempt >= 3) {
+          tryBecomeHostAsFallback();
+        } else {
+          joinAsParticipant(hostId, attempt + 1);
+        }
+      }, 8000);
+
+      conn.on('open', () => {
+        joined = true;
+        clearTimeout(failTimer);
+        state.dataConns.set(hostId, conn);
+        setupDataConnHandlers(conn);
+        conn.send({ type: 'join', id: state.myId, name: state.myName });
+        setStatus('Connected');
+        afterConnected();
+      });
+      conn.on('error', (e) => log('conn to host error', e));
+    });
+
+    p.on('error', (err) => {
+      log('participant peer error', err);
+      setStatus('Signaling error, retrying…');
+    });
+  }
+
+  function tryBecomeHostAsFallback() {
+    setStatus('Host offline — attempting to restore the room…');
+    const hostId = state.hostId;
+    const p = new Peer(hostId, peerOptions());
+    p.on('open', (id) => {
+      state.peer = p;
+      state.myId = id;
+      state.isHost = true;
+      state.members.set(id, { name: state.myName });
+      setupPeerEvents(p);
+      setStatus('Connected (room restored — you are now host)');
+      renderPeopleList();
+      afterConnected();
+      broadcastToAll({ type: 'peer-joined', id, name: state.myName });
+    });
+    p.on('error', () => {
+      // someone else already grabbed it — just join normally
+      setTimeout(() => joinAsParticipant(hostId), 1000);
+    });
+  }
+
+  function afterConnected() {
+    document.title = 'ClassMeet Live — ' + state.roomCode;
+    renderPeopleList();
+    updateCounts();
+    addSystemChat('You joined room "' + state.roomCode + '" as ' + state.myName);
+  }
+
+  // ------------------------------------------------------------------
+  // PEERJS EVENT WIRING
+  // ------------------------------------------------------------------
+  function setupPeerEvents(p) {
+    p.on('connection', (conn) => {
+      setupDataConnHandlers(conn);
+    });
+    p.on('disconnected', () => {
+      setStatus('Reconnecting to signaling server…');
+      try { p.reconnect(); } catch (_) {}
+    });
+    p.on('close', () => setStatus('Disconnected'));
+  }
+
+  function setupDataConnHandlers(conn) {
+    conn.on('open', () => {
+      state.dataConns.set(conn.peer, conn);
+      // Establish media mesh connection with this peer if we haven't yet.
+      ensurePeerConnection(conn.peer);
+      updateCounts();
+    });
+    conn.on('data', (msg) => handleData(conn.peer, msg));
+    conn.on('close', () => onPeerFullyGone(conn.peer));
+    conn.on('error', (e) => log('dataconn error', conn.peer, e));
+  }
+
+  function sendTo(peerId, msg) {
+    const c = state.dataConns.get(peerId);
+    if (c && c.open) c.send(msg);
+  }
+  function broadcastToAll(msg, exceptId) {
+    state.dataConns.forEach((c, id) => {
+      if (id !== exceptId && c.open) c.send(msg);
+    });
+  }
+
+  // ------------------------------------------------------------------
+  // MESSAGE HANDLING
+  // ------------------------------------------------------------------
+  function handleData(fromId, msg) {
+    if (!msg || !msg.type) return;
+    switch (msg.type) {
+      case 'join': {
+        // host-only: a new participant is joining
+        if (!state.isHost) return;
+        state.members.set(msg.id, { name: msg.name });
+        const conn = state.dataConns.get(msg.id);
+        if (conn) {
+          conn.send({ type: 'roster', members: Array.from(state.members.entries()) });
+          // Tell the newcomer about currently active screen shares
+          state.activeScreenSharers.forEach((sid) => {
+            const streamId = state.remoteScreenStreamId.get(sid) || (sid === state.myId ? (state.localScreenStream && state.localScreenStream.id) : null);
+            if (streamId) conn.send({ type: 'share-start', from: sid, streamId });
+          });
+        }
+        broadcastToAll({ type: 'peer-joined', id: msg.id, name: msg.name }, msg.id);
+        addSystemChat(msg.name + ' joined the class');
+        renderPeopleList();
+        break;
+      }
+      case 'roster': {
+        (msg.members || []).forEach(([id, info]) => {
+          if (id === state.myId) return;
+          state.members.set(id, info);
+          maybeConnectMesh(id);
+        });
+        renderPeopleList();
+        updateCounts();
+        break;
+      }
+      case 'peer-joined': {
+        if (msg.id === state.myId) return;
+        state.members.set(msg.id, { name: msg.name });
+        maybeConnectMesh(msg.id);
+        addSystemChat(msg.name + ' joined the class');
+        renderPeopleList();
+        updateCounts();
+        break;
+      }
+      case 'peer-left': {
+        addSystemChat((state.members.get(msg.id) || {}).name + ' left');
+        state.members.delete(msg.id);
+        onPeerFullyGone(msg.id);
+        renderPeopleList();
+        updateCounts();
+        break;
+      }
+      case 'leaving': {
+        if (state.isHost) {
+          state.members.delete(fromId);
+          broadcastToAll({ type: 'peer-left', id: fromId }, fromId);
+        }
+        break;
+      }
+      case 'offer':
+      case 'answer':
+        handleSdp(fromId, msg);
+        break;
+      case 'ice':
+        handleIce(fromId, msg);
+        break;
+      case 'share-start':
+        state.remoteScreenStreamId.set(msg.from || fromId, msg.streamId);
+        state.activeScreenSharers.add(msg.from || fromId);
+        renderStagePlaceholderVisibility();
+        markTileSharing(msg.from || fromId, true);
+        checkPendingStreamPromotion(msg.from || fromId);
+        break;
+      case 'share-stop':
+        state.remoteScreenStreamId.delete(msg.from || fromId);
+        state.activeScreenSharers.delete(msg.from || fromId);
+        removeScreenTile(msg.from || fromId);
+        markTileSharing(msg.from || fromId, false);
+        renderStagePlaceholderVisibility();
+        break;
+      case 'mic-state':
+        state.remoteMicState.set(fromId, msg.on);
+        updateTileMicIcon(fromId, msg.on);
+        break;
+      case 'chat':
+        addChatMessage(msg.name, msg.text, false);
+        break;
+      default:
+        break;
+    }
+  }
+
+  function maybeConnectMesh(remoteId) {
+    if (remoteId === state.myId) return;
+    if (state.dataConns.has(remoteId)) { ensurePeerConnection(remoteId); return; }
+    // deterministic rule: lower id initiates the data connection
+    if (state.myId < remoteId) {
+      const conn = state.peer.connect(remoteId, { reliable: true, metadata: { name: state.myName } });
+      setupDataConnHandlers(conn);
+    }
+    // else: wait for them to connect to us (their id is lower)
+  }
+
+  // ------------------------------------------------------------------
+  // WEBRTC MEDIA MESH (perfect-negotiation pattern per peer)
+  // ------------------------------------------------------------------
+  function ensurePeerConnection(remoteId) {
+    if (state.pcs.has(remoteId)) return state.pcs.get(remoteId);
+
+    const polite = state.myId > remoteId;
+    const pc = new RTCPeerConnection({ iceServers: CONFIG.iceServers });
+    const entry = { pc, polite, makingOffer: false, ignoreOffer: false, iceQueue: [], senders: {} };
+    state.pcs.set(remoteId, entry);
+
+    pc.onnegotiationneeded = async () => {
+      try {
+        entry.makingOffer = true;
+        await pc.setLocalDescription();
+        sendTo(remoteId, { type: 'offer', sdp: tweakSdp(pc.localDescription.sdp) });
+      } catch (e) {
+        log('negotiation error', e);
+      } finally {
+        entry.makingOffer = false;
+      }
+    };
+
+    pc.onicecandidate = ({ candidate }) => {
+      if (candidate) sendTo(remoteId, { type: 'ice', candidate });
+    };
+
+    pc.ontrack = (e) => onRemoteTrack(remoteId, e);
+
+    pc.onconnectionstatechange = () => {
+      log('pc state', remoteId, pc.connectionState);
+      if (pc.connectionState === 'failed') {
+        try { pc.restartIce(); } catch (_) {}
+      }
+      updateCounts();
+    };
+
+    addAllLocalTracksTo(remoteId);
+    return entry;
+  }
+
+  function addAllLocalTracksTo(remoteId) {
+    const entry = state.pcs.get(remoteId);
+    if (!entry) return;
+    const { pc, senders } = entry;
+
+    state.localPersonalStream.getTracks().forEach((track) => {
+      const key = track.kind === 'audio' ? 'mic' : 'cam';
+      if (!senders[key]) {
+        senders[key] = pc.addTrack(track, state.localPersonalStream);
+        applyBitrate(senders[key], track.kind === 'audio' ? CONFIG.OPUS_BITRATE_MIC : CONFIG.VIDEO_BITRATE_CAM);
+      }
+    });
+
+    if (state.localScreenStream) {
+      state.localScreenStream.getTracks().forEach((track) => {
+        const key = track.kind === 'audio' ? 'screenA' : 'screenV';
+        if (!senders[key]) {
+          senders[key] = pc.addTrack(track, state.localScreenStream);
+          applyBitrate(senders[key], track.kind === 'audio' ? CONFIG.OPUS_BITRATE : CONFIG.VIDEO_BITRATE_SCREEN);
+          if (track.kind === 'video') { try { track.contentHint = 'motion'; } catch (_) {} }
+          if (track.kind === 'audio') { try { track.contentHint = 'music'; } catch (_) {} }
+        }
+      });
+    }
+  }
+
+  async function applyBitrate(sender, bps) {
+    try {
+      const params = sender.getParameters();
+      if (!params.encodings || !params.encodings.length) params.encodings = [{}];
+      params.encodings[0].maxBitrate = bps;
+      if (sender.track && sender.track.kind === 'audio') {
+        // priority hint helps some engines allocate bandwidth to audio first
+        params.encodings[0].priority = 'high';
+      }
+      await sender.setParameters(params);
+    } catch (e) {
+      // Non-fatal: some browsers restrict setParameters before negotiation completes.
+    }
+  }
+
+  async function handleSdp(remoteId, msg) {
+    const entry = ensurePeerConnection(remoteId);
+    const { pc, polite } = entry;
+    const desc = { type: msg.type, sdp: msg.sdp };
+
+    const offerCollision = msg.type === 'offer' && (entry.makingOffer || pc.signalingState !== 'stable');
+    entry.ignoreOffer = !polite && offerCollision;
+    if (entry.ignoreOffer) return;
+
+    try {
+      await pc.setRemoteDescription(desc);
+    } catch (e) {
+      log('setRemoteDescription failed', e);
+      return;
+    }
+
+    // flush any queued ICE candidates now that remote description is set
+    if (entry.iceQueue.length) {
+      for (const c of entry.iceQueue) {
+        try { await pc.addIceCandidate(c); } catch (e) { log('queued ice failed', e); }
+      }
+      entry.iceQueue = [];
+    }
+
+    if (msg.type === 'offer') {
+      await pc.setLocalDescription();
+      sendTo(remoteId, { type: 'answer', sdp: tweakSdp(pc.localDescription.sdp) });
+    }
+  }
+
+  async function handleIce(remoteId, msg) {
+    const entry = state.pcs.get(remoteId);
+    if (!entry) return;
+    const candidate = msg.candidate;
+    if (!entry.pc.remoteDescription || !entry.pc.remoteDescription.type) {
+      entry.iceQueue.push(candidate);
+      return;
+    }
+    try {
+      await entry.pc.addIceCandidate(candidate);
+    } catch (e) {
+      if (!entry.ignoreOffer) log('addIceCandidate failed', e);
+    }
+  }
+
+  function onRemoteTrack(remoteId, event) {
+    const stream = event.streams[0];
+    if (!stream) return;
+    const screenId = state.remoteScreenStreamId.get(remoteId);
+
+    if (screenId && stream.id === screenId) {
+      renderScreenTile(remoteId, stream);
+    } else if (!screenId) {
+      // Might be a screen share whose 'share-start' message hasn't
+      // arrived yet (data channel vs media channel race). Hold a short
+      // grace period before falling back to treating it as a personal cam/mic stream.
+      const pendingKey = remoteId + ':' + stream.id;
+      if (!state._pendingClassify) state._pendingClassify = new Map();
+      if (!state._pendingClassify.has(pendingKey)) {
+        state._pendingClassify.set(pendingKey, true);
+        setTimeout(() => {
+          const laterScreenId = state.remoteScreenStreamId.get(remoteId);
+          if (laterScreenId && stream.id === laterScreenId) {
+            renderScreenTile(remoteId, stream);
+          } else {
+            renderPersonalTile(remoteId, stream);
+          }
+        }, 350);
+      }
+    } else {
+      renderPersonalTile(remoteId, stream);
+    }
+  }
+
+  function checkPendingStreamPromotion(remoteId) {
+    // If we already rendered this peer's stream as "personal" but it was
+    // actually their screen (message arrived late), promote it now.
+    const streamId = state.remoteScreenStreamId.get(remoteId);
+    const entry = state.pcs.get(remoteId);
+    if (!entry || !streamId) return;
+    entry.pc.getReceivers().forEach((r) => {
+      // no-op placeholder: actual promotion handled by the 350ms grace window above in most cases
+    });
+  }
+
+  function onPeerFullyGone(remoteId) {
+    const entry = state.pcs.get(remoteId);
+    if (entry) {
+      try { entry.pc.close(); } catch (_) {}
+      state.pcs.delete(remoteId);
+    }
+    state.dataConns.delete(remoteId);
+    removeCamTile(remoteId);
+    removeScreenTile(remoteId);
+    state.activeScreenSharers.delete(remoteId);
+    state.remoteScreenStreamId.delete(remoteId);
+    renderStagePlaceholderVisibility();
+    updateCounts();
+  }
+
+  // ------------------------------------------------------------------
+  // SDP MUNGING — push Opus + video to max practical quality
+  // ------------------------------------------------------------------
+  function tweakSdp(sdp) {
+    sdp = boostOpus(sdp, CONFIG.OPUS_BITRATE);
+    sdp = boostVideoBitrate(sdp, CONFIG.VIDEO_BITRATE_SCREEN);
+    return sdp;
+  }
+
+  function boostOpus(sdp, bitrate) {
+    const lines = sdp.split('\r\n');
+    let opusPayload = null;
+    for (const line of lines) {
+      const m = line.match(/^a=rtpmap:(\d+) opus\/48000\/2/i);
+      if (m) { opusPayload = m[1]; break; }
+    }
+    if (!opusPayload) return sdp;
+
+    let fmtpFound = false;
+    const out = lines.map((line) => {
+      const fmtpRe = new RegExp('^a=fmtp:' + opusPayload + ' ');
+      if (fmtpRe.test(line)) {
+        fmtpFound = true;
+        let l = line;
+        const extra = { 'maxaveragebitrate': bitrate, 'stereo': 1, 'sprop-stereo': 1, 'maxplaybackrate': 48000, 'useinbandfec': 1 };
+        Object.entries(extra).forEach(([k, v]) => {
+          const re = new RegExp('(' + k + '=)[^;]*');
+          if (re.test(l)) l = l.replace(re, '$1' + v);
+          else l += ';' + k + '=' + v;
+        });
+        return l;
+      }
+      return line;
+    });
+
+    if (!fmtpFound) {
+      const idx = out.findIndex((l) => l.startsWith('a=rtpmap:' + opusPayload));
+      if (idx !== -1) {
+        out.splice(idx + 1, 0, `a=fmtp:${opusPayload} maxaveragebitrate=${bitrate};stereo=1;sprop-stereo=1;maxplaybackrate=48000;useinbandfec=1`);
+      }
+    }
+    return out.join('\r\n');
+  }
+
+  function boostVideoBitrate(sdp, bps) {
+    const kbps = Math.round(bps / 1000);
+    const lines = sdp.split('\r\n');
+    const out = [];
+    let inVideo = false;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (line.startsWith('m=video')) inVideo = true;
+      else if (line.startsWith('m=')) inVideo = false;
+      out.push(line);
+      if (inVideo && line.startsWith('c=IN')) {
+        out.push('b=AS:' + kbps);
+        out.push('b=TIAS:' + bps);
+      }
+    }
+    return out.join('\r\n');
+  }
+
+  // ------------------------------------------------------------------
+  // LOCAL MEDIA CONTROLS
+  // ------------------------------------------------------------------
+  async function toggleMic() {
+    if (!state.micEnabled) {
+      try {
+        const constraints = state.hqMic
+          ? { audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 2, sampleRate: 48000 } }
+          : { audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } };
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        stream.getAudioTracks().forEach((t) => state.localPersonalStream.addTrack(t));
+        state.micEnabled = true;
+        pushLocalTrackToAllPeers('mic');
+      } catch (e) {
+        alert('Could not access microphone: ' + e.message);
+        return;
+      }
+    } else {
+      state.localPersonalStream.getAudioTracks().forEach((t) => {
+        t.stop();
+        state.localPersonalStream.removeTrack(t);
+      });
+      state.pcs.forEach((entry) => {
+        if (entry.senders.mic) { try { entry.pc.removeTrack(entry.senders.mic); } catch (_) {} entry.senders.mic = null; }
+      });
+      state.micEnabled = false;
+    }
+    micBtn.classList.toggle('active', !state.micEnabled);
+    broadcastToAll({ type: 'mic-state', on: state.micEnabled });
+    updateLocalTileAvatar();
+  }
+
+  async function toggleCam() {
+    if (!state.camEnabled) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } } });
+        stream.getVideoTracks().forEach((t) => state.localPersonalStream.addTrack(t));
+        state.camEnabled = true;
+        pushLocalTrackToAllPeers('cam');
+        renderLocalTile();
+      } catch (e) {
+        alert('Could not access camera: ' + e.message);
+        return;
+      }
+    } else {
+      state.localPersonalStream.getVideoTracks().forEach((t) => {
+        t.stop();
+        state.localPersonalStream.removeTrack(t);
+      });
+      state.pcs.forEach((entry) => {
+        if (entry.senders.cam) { try { entry.pc.removeTrack(entry.senders.cam); } catch (_) {} entry.senders.cam = null; }
+      });
+      state.camEnabled = false;
+      renderLocalTile();
+    }
+    camBtn.classList.toggle('active', state.camEnabled);
+  }
+
+  function pushLocalTrackToAllPeers(kind) {
+    state.pcs.forEach((entry, remoteId) => addAllLocalTracksTo(remoteId));
+  }
+
+  async function toggleScreenShare() {
+    if (!state.screenEnabled) {
+      try {
+        const stream = await navigator.mediaDevices.getDisplayMedia({
+          video: { frameRate: { ideal: 30, max: 60 }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+          audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 2, sampleRate: 48000 }
+        });
+        state.localScreenStream = stream;
+        state.screenEnabled = true;
+        screenBtn.classList.add('active');
+        screenBtn.querySelector('.lbl').textContent = 'Stop sharing';
+
+        stream.getVideoTracks()[0].addEventListener('ended', () => {
+          if (state.screenEnabled) stopScreenShareInternal();
+        });
+
+        state.pcs.forEach((entry, remoteId) => addAllLocalTracksTo(remoteId));
+        state.activeScreenSharers.add(state.myId);
+        broadcastToAll({ type: 'share-start', from: state.myId, streamId: stream.id });
+        renderScreenTile(state.myId, stream, true);
+        renderStagePlaceholderVisibility();
+      } catch (e) {
+        if (e && e.name !== 'NotAllowedError') alert('Could not start screen share: ' + e.message);
+      }
+    } else {
+      stopScreenShareInternal();
+    }
+  }
+
+  function stopScreenShareInternal() {
+    if (!state.localScreenStream) return;
+    const streamId = state.localScreenStream.id;
+    state.localScreenStream.getTracks().forEach((t) => t.stop());
+    state.pcs.forEach((entry) => {
+      ['screenV', 'screenA'].forEach((key) => {
+        if (entry.senders[key]) { try { entry.pc.removeTrack(entry.senders[key]); } catch (_) {} entry.senders[key] = null; }
+      });
+    });
+    state.localScreenStream = null;
+    state.screenEnabled = false;
+    screenBtn.classList.remove('active');
+    screenBtn.querySelector('.lbl').textContent = 'Share screen';
+    state.activeScreenSharers.delete(state.myId);
+    broadcastToAll({ type: 'share-stop', from: state.myId, streamId });
+    removeScreenTile(state.myId);
+    renderStagePlaceholderVisibility();
+  }
+
+  hqMicToggle.addEventListener('change', () => {
+    state.hqMic = hqMicToggle.checked;
+    if (state.micEnabled) {
+      // restart mic capture with new constraints
+      state.localPersonalStream.getAudioTracks().forEach((t) => { t.stop(); state.localPersonalStream.removeTrack(t); });
+      state.pcs.forEach((entry) => { if (entry.senders.mic) { try { entry.pc.removeTrack(entry.senders.mic); } catch (_) {} entry.senders.mic = null; } });
+      state.micEnabled = false;
+      toggleMic();
+    }
+  });
+
+  micBtn.addEventListener('click', toggleMic);
+  camBtn.addEventListener('click', toggleCam);
+  screenBtn.addEventListener('click', toggleScreenShare);
+
+  // ------------------------------------------------------------------
+  // UI RENDERING
+  // ------------------------------------------------------------------
+  function renderLocalTile() {
+    let tile = document.getElementById('tile-local');
+    if (!tile) {
+      tile = document.createElement('div');
+      tile.className = 'cam-tile mirror';
+      tile.id = 'tile-local';
+      tile.innerHTML = `
+        <video autoplay playsinline muted></video>
+        <div class="avatar" style="display:none"></div>
+        <div class="name-tag"><span class="mic-ic">🎤</span><span>You</span></div>`;
+      tilesRow.prepend(tile);
+    }
+    const video = tile.querySelector('video');
+    const avatar = tile.querySelector('.avatar');
+    if (state.camEnabled) {
+      video.srcObject = state.localPersonalStream;
+      video.style.display = '';
+      avatar.style.display = 'none';
+    } else {
+      video.style.display = 'none';
+      avatar.style.display = 'flex';
+      avatar.textContent = shortName(state.myName);
+    }
+  }
+  function updateLocalTileAvatar() {
+    const tile = document.getElementById('tile-local');
+    if (!tile) { renderLocalTile(); return; }
+    const micIc = tile.querySelector('.mic-ic');
+    if (micIc) micIc.textContent = state.micEnabled ? '🎤' : '🔇';
+  }
+
+  function getOrCreateCamTile(remoteId) {
+    let tile = document.getElementById('tile-' + remoteId);
+    if (!tile) {
+      tile = document.createElement('div');
+      tile.className = 'cam-tile';
+      tile.id = 'tile-' + remoteId;
+      const name = (state.members.get(remoteId) || {}).name || 'Guest';
+      tile.innerHTML = `
+        <video autoplay playsinline></video>
+        <div class="avatar">${escapeHtml(shortName(name))}</div>
+        <div class="name-tag"><span class="mic-ic">🎤</span><span class="nm">${escapeHtml(name)}</span></div>`;
+      tilesRow.appendChild(tile);
+    }
+    return tile;
+  }
+
+  function renderPersonalTile(remoteId, stream) {
+    const tile = getOrCreateCamTile(remoteId);
+    const video = tile.querySelector('video');
+    const avatar = tile.querySelector('.avatar');
+    video.srcObject = stream;
+    const hasVideo = stream.getVideoTracks().length > 0;
+    video.style.display = hasVideo ? '' : 'none';
+    avatar.style.display = hasVideo ? 'none' : 'flex';
+  }
+
+  function removeCamTile(remoteId) {
+    const tile = document.getElementById('tile-' + remoteId);
+    if (tile) tile.remove();
+  }
+
+  function markTileSharing(remoteId, on) {
+    const tile = document.getElementById('tile-' + remoteId) || document.getElementById(remoteId === state.myId ? 'tile-local' : '');
+    if (tile) tile.classList.toggle('sharing', on);
+  }
+
+  function updateTileMicIcon(remoteId, on) {
+    const tile = document.getElementById('tile-' + remoteId);
+    if (!tile) return;
+    const ic = tile.querySelector('.mic-ic');
+    if (ic) ic.textContent = on ? '🎤' : '🔇';
+  }
+
+  function renderScreenTile(peerId, stream, isSelf) {
+    let el = state.screenTiles.get(peerId);
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'screen-tile';
+      const name = isSelf ? 'You' : ((state.members.get(peerId) || {}).name || 'Guest');
+      el.innerHTML = `<video autoplay playsinline ${isSelf ? 'muted' : ''}></video><div class="tile-tag">🖥️ ${escapeHtml(name)}'s screen</div>`;
+      stageGrid.appendChild(el);
+      state.screenTiles.set(peerId, el);
+    }
+    const video = el.querySelector('video');
+    if (video.srcObject !== stream) video.srcObject = stream;
+    renderStagePlaceholderVisibility();
+  }
+
+  function removeScreenTile(peerId) {
+    const el = state.screenTiles.get(peerId);
+    if (el) { el.remove(); state.screenTiles.delete(peerId); }
+  }
+
+  function renderStagePlaceholderVisibility() {
+    stagePlaceholder.style.display = state.screenTiles.size === 0 ? 'flex' : 'none';
+  }
+
+  function renderPeopleList() {
+    peopleList.innerHTML = '';
+    const meLi = document.createElement('li');
+    meLi.innerHTML = `<span>${escapeHtml(state.myName)} (You)</span>${state.isHost ? '<span class="tag">host</span>' : ''}`;
+    peopleList.appendChild(meLi);
+    state.members.forEach((info, id) => {
+      if (id === state.myId) return;
+      const li = document.createElement('li');
+      li.innerHTML = `<span>${escapeHtml(info.name || 'Guest')}</span>${id === state.hostId ? '<span class="tag">host</span>' : ''}`;
+      peopleList.appendChild(li);
+    });
+  }
+
+  function updateCounts() {
+    const total = 1 + state.members.size - (state.members.has(state.myId) ? 1 : 0);
+    peopleCount.textContent = total;
+    netBadge.textContent = 'Peers: ' + state.pcs.size;
+  }
+
+  // ------------------------------------------------------------------
+  // CHAT
+  // ------------------------------------------------------------------
+  function addChatMessage(name, text, self) {
+    const div = document.createElement('div');
+    div.className = 'msg';
+    div.innerHTML = `<b>${escapeHtml(name)}${self ? ' (you)' : ''}:</b> <span class="txt">${escapeHtml(text)}</span>`;
+    chatMessages.appendChild(div);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+  function addSystemChat(text) {
+    const div = document.createElement('div');
+    div.className = 'msg';
+    div.innerHTML = `<span class="sys">${escapeHtml(text)}</span>`;
+    chatMessages.appendChild(div);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+  chatForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = chatInput.value.trim();
+    if (!text) return;
+    addChatMessage(state.myName, text, true);
+    broadcastToAll({ type: 'chat', name: state.myName, text });
+    chatInput.value = '';
+  });
+
+  // ------------------------------------------------------------------
+  // SIDE PANEL / TOP BAR CONTROLS
+  // ------------------------------------------------------------------
+  function openSidePanel(tab) {
+    sidePanel.hidden = false;
+    document.querySelectorAll('.side-tab').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
+    peopleList.hidden = tab !== 'people';
+    chatBody.hidden = tab !== 'chat';
+  }
+  participantsBtn.addEventListener('click', () => {
+    if (!sidePanel.hidden && !peopleList.hidden) { sidePanel.hidden = true; return; }
+    openSidePanel('people');
+  });
+  chatToggleBtn.addEventListener('click', () => {
+    if (!sidePanel.hidden && !chatBody.hidden) { sidePanel.hidden = true; return; }
+    openSidePanel('chat');
+  });
+  document.querySelectorAll('.side-tab').forEach((b) => b.addEventListener('click', () => openSidePanel(b.dataset.tab)));
+
+  copyLinkBtn.addEventListener('click', async () => {
+    const url = location.origin + location.pathname + '?room=' + encodeURIComponent(state.roomCode);
+    try {
+      await navigator.clipboard.writeText(url);
+      copyLinkBtn.textContent = '✅ Copied!';
+      setTimeout(() => (copyLinkBtn.textContent = '🔗 Copy invite'), 1500);
+    } catch (_) {
+      prompt('Copy this invite link:', url);
+    }
+  });
+
+  leaveBtn.addEventListener('click', () => leaveRoom());
+
+  function leaveRoom() {
+    broadcastToAll({ type: 'leaving' });
+    if (state.isHost) {
+      broadcastToAll({ type: 'peer-left', id: state.myId });
+    }
+    state.pcs.forEach((entry) => { try { entry.pc.close(); } catch (_) {} });
+    state.dataConns.forEach((c) => { try { c.close(); } catch (_) {} });
+    if (state.peer) { try { state.peer.destroy(); } catch (_) {} }
+    if (state.localScreenStream) state.localScreenStream.getTracks().forEach((t) => t.stop());
+    state.localPersonalStream.getTracks().forEach((t) => t.stop());
+    location.reload();
+  }
+
+  window.addEventListener('beforeunload', () => {
+    try {
+      broadcastToAll({ type: 'leaving' });
+      if (state.isHost) broadcastToAll({ type: 'peer-left', id: state.myId });
+    } catch (_) {}
+  });
+
+  // periodic UI heartbeat for counts
+  setInterval(updateCounts, 4000);
+})();
+
+</script>
+</body>
+  </html>
