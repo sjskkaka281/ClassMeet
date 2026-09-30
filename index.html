@@ -23,6 +23,12 @@
 }
 *{box-sizing:border-box;}
 [hidden]{display:none !important;}
+:root{
+  /* Real visible viewport height in px, kept in sync by JS (see app.js
+     setAppHeight()). This fixes Android/iOS mobile browsers where 100vh
+     includes the address-bar area and hides bottom controls. */
+  --app-height: 100vh;
+}
 html,body{
   height:100%;
   margin:0;
@@ -41,7 +47,11 @@ input{
 
 .screen{
   width:100vw;
-  height:100vh;
+  height:100vh;              /* fallback for very old browsers */
+  height:var(--app-height);  /* JS-corrected, most reliable on mobile */
+}
+@supports (height: 100dvh){
+  .screen{ height: 100dvh; } /* modern browsers: dynamic viewport height */
 }
 
 /* ---------------- LOGIN ---------------- */
@@ -147,14 +157,18 @@ input{
   display:flex;
   flex-direction:column;
   background:var(--bg);
+  overflow:hidden;
 }
+.topbar{ flex-shrink:0; }
+.stage-area{ flex-shrink:1; }
 .topbar{
-  height:54px;
   min-height:54px;
+  flex-wrap:wrap;
+  row-gap:6px;
   display:flex;
   align-items:center;
   justify-content:space-between;
-  padding:0 16px;
+  padding:8px 16px;
   background:var(--bg-elev);
   border-bottom:1px solid var(--border);
 }
@@ -164,6 +178,9 @@ input{
   gap:10px;
   font-size:13.5px;
   color:var(--text-dim);
+  flex-wrap:wrap;
+  row-gap:6px;
+  min-width:0;
 }
 .dot{
   width:9px;height:9px;border-radius:50%;
@@ -387,15 +404,16 @@ input{
 }
 
 .control-bar{
-  height:78px;
   min-height:78px;
+  flex-shrink:0;
+  flex-wrap:wrap;
   display:flex;
   align-items:center;
   justify-content:center;
   gap:14px;
   background:var(--bg-elev);
   border-top:1px solid var(--border);
-  padding:0 16px;
+  padding:10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
 }
 .ctrl{
   display:flex;
@@ -429,6 +447,20 @@ input{
   border:1px solid var(--border);
   padding:5px 10px;
   border-radius:20px;
+}
+
+@media (max-width:600px){
+  .topbar{ padding:6px 10px; gap:6px; }
+  .room-info{ font-size:12px; gap:6px; }
+  #roomLabel{ max-width:80px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #copyLinkBtn{ padding:5px 8px; font-size:11.5px; }
+  .status{ display:none; } /* verbose status text hidden on very small screens; the live dot still shows state */
+  .topbar-actions{ gap:5px; }
+  #participantsBtn, #chatToggleBtn{ padding:5px 8px; font-size:11.5px; }
+  .stage-area{ padding:8px 8px 0; gap:6px; }
+  .tiles-row{ min-height:88px; padding-bottom:8px; }
+  .control-bar{ min-height:64px; gap:8px; padding:8px; }
+  .net-badge{ display:none; }
 }
 
 @media (max-width:860px){
@@ -466,7 +498,7 @@ input{
       </label>
       <button type="submit" id="loginBtn">Join Class</button>
       <p class="error" id="loginError"></p>
-      <p class="hint">Default login: <b>admin</b> / <b>admin</b> — everyone who enters the same Room Code joins the same class.</p>
+      <p class="hint">Login: <b>admin</b>/<b>admin</b>, <b>arpan</b>/<b>arpan</b>, or <b>dev</b>/<b>dev</b> — everyone who enters the same Room Code joins the same class.</p>
     </form>
   </div>
 </section>
@@ -579,8 +611,12 @@ input{
       { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
     ],
 
-    AUTH_USER: 'admin',
-    AUTH_PASS: 'admin',
+    // Any of these username/password pairs can log in.
+    VALID_LOGINS: [
+      { user: 'admin', pass: 'admin' },
+      { user: 'arpan', pass: 'arpan' },
+      { user: 'dev', pass: 'dev' },
+    ],
 
     OPUS_BITRATE: 510000,       // max practical opus bitrate (bps)
     OPUS_BITRATE_MIC: 256000,   // mic voice, still very high quality
@@ -590,6 +626,24 @@ input{
     HOST_PREFIX: 'cml-host-',
     HOST_FALLBACK_BASE_DELAY: 2500, // ms
   };
+
+  // ------------------------------------------------------------------
+  // MOBILE VIEWPORT-HEIGHT FIX
+  // Android/iOS browsers' address bar makes 100vh taller than what's
+  // actually visible, which was hiding the bottom control bar (mic /
+  // camera / share screen buttons). We measure the real visible height
+  // with JS and expose it as --app-height, kept in sync on resize,
+  // orientation change and the mobile keyboard opening/closing.
+  // ------------------------------------------------------------------
+  function setAppHeight() {
+    document.documentElement.style.setProperty('--app-height', window.innerHeight + 'px');
+  }
+  setAppHeight();
+  window.addEventListener('resize', setAppHeight);
+  window.addEventListener('orientationchange', () => setTimeout(setAppHeight, 150));
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', setAppHeight);
+  }
 
   // ------------------------------------------------------------------
   // DOM
@@ -696,8 +750,9 @@ input{
     const name = $('displayName').value.trim();
     const room = $('roomCode').value.trim();
 
-    if (u !== CONFIG.AUTH_USER || p !== CONFIG.AUTH_PASS) {
-      loginError.textContent = 'Invalid username or password. Default is admin / admin.';
+    const validLogin = CONFIG.VALID_LOGINS.some((l) => l.user === u && l.pass === p);
+    if (!validLogin) {
+      loginError.textContent = 'Invalid username or password.';
       return;
     }
     if (!name || !room) {
@@ -1538,5 +1593,5 @@ input{
 })();
 
 </script>
-</body>
-  </html>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4339cc5787c867b',t:'MTc5MDc3NTM0Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
